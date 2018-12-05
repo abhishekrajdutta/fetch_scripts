@@ -49,10 +49,6 @@ if __name__ == '__main__':
     gripper_pose_stamped = PoseStamped()
     gripper_pose_stamped.header.frame_id = 'base_link'
 
-    move_cmd = Twist()
-    move_cmd.linear.x=1
-
-    while not rospy.is_shutdown():
         for pose in gripper_poses:
             # Finish building the Pose_stamped message
             # If the message stamp is not current it could be ignored
@@ -64,9 +60,6 @@ if __name__ == '__main__':
             move_group.moveToPose(gripper_pose_stamped, gripper_frame)
             result = move_group.get_move_action().get_result()
 
-            vel_pub.publish(move_cmd)
-
-            if result:
                 # Checking the MoveItErrorCode
                 if result.error_code.val == MoveItErrorCodes.SUCCESS:
                     rospy.loginfo("Hello there!")

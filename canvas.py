@@ -25,6 +25,7 @@ def main():
 
 	# aimed resolution = 1600x1200
 
+	m = Marker()
 	scaled_x1 = x1*2.5
 	scaled_y1 = y1*2.5
 
@@ -49,7 +50,6 @@ def main():
 	
 	e1 = np.linspace (scaled_x1,scaled_x2,100)
 
-	m = Marker()
 	markerPub.publish(m)
 
 
