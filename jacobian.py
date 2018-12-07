@@ -11,6 +11,15 @@ def compose(*poses):
     """Compose all Pose2 transforms given as arguments from left to right."""
     return reduce((lambda x, y: x.compose(y)), poses)
 
+FETCH_WHEEL_RADIUS = 0.055325
+FETCH_WHEEL_BASE = 2 * 0.18738
+
+base_jacobian = np.array([[1, 1], #x
+													[0, 0], #y
+													[0, 0], #z
+													[0, 0], #th_x
+													[0, 0], #th_y
+													[1/FETCH_WHEEL_BASE, -1/FETCH_WHEEL_BASE]]) * FETCH_WHEEL_RADIUS #th_z
 
 si = []
 si.append(np.array([0,0,1,0,0,0], dtype=np.float))
