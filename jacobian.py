@@ -11,109 +11,96 @@ def compose(*poses):
     """Compose all Pose2 transforms given as arguments from left to right."""
     return reduce((lambda x, y: x.compose(y)), poses)
 
-FETCH_WHEEL_RADIUS = 0.055325
-FETCH_WHEEL_BASE = 2 * 0.18738
-
-base_jacobian = np.array([[0, 0], #th_x
-													[0, 0], #th_y
-													[1/FETCH_WHEEL_BASE, -1/FETCH_WHEEL_BASE],  #th_z
-													[1, 1], #x
-													[0, 0], #y
-													[0, 0], #z
-													]) * FETCH_WHEEL_RADIUS
-
-si = []
-si.append(np.array([0,0,1,0,0,0], dtype=np.float))
-si.append (np.array([0,-1,0,0,0,-1], dtype=np.float))
-si.append (np.array([1,0,0,0,0,0], dtype=np.float))
-si.append (np.array([0,-1,0,0,0,-3], dtype=np.float))
-si.append (np.array([1,0,0,0,0,0], dtype=np.float))
-si.append (np.array([0,-1,0,0,0,-5], dtype=np.float))
-si.append (np.array([1,0,0,0,0,0], dtype=np.float))
-
-# print Pose3(Rot3.rpy(0.0, 0.0, 0), Point3(0, 0, 0))
-
-v = np.array([[0,0,0,0,1,0]]).T
-q = [0,0,0,0,0,0,0]
-# def get_T(q):
-L = [1, 1, 1, 1, 1, 1, 1]
-T=[]
-T.append(Pose3(Rot3.Ypr(q[0], 0.0, 0.0 ), Point3(0, 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, q[1], 0.0), Point3(L[0], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, 0.0, q[2]), Point3(L[1], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, q[3],0.0 ), Point3(L[2], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, 0.0 ,q[4] ), Point3(L[3], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, q[5],0.0 ), Point3(L[4], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, 0.0 ,q[6] ), Point3(L[5], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, 0.0 , 0.0 ), Point3(L[6], 0, 0)))
-
-fk = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
+# setup
 
 
-# forward kinematics
-g = []
-g.append ( Pose3.Expmap(q[0]*np.array([0,0,1,0,0,0], dtype=np.float)))
-g.append ( Pose3.Expmap(q[1]*np.array([0,1,0,0,0,1], dtype=np.float)))
-g.append ( Pose3.Expmap(q[2]*np.array([1,0,0,0,0,0], dtype=np.float)))
-g.append ( Pose3.Expmap(q[3]*np.array([0,1,0,0,0,3], dtype=np.float)))
-g.append ( Pose3.Expmap(q[4]*np.array([1,0,0,0,0,0], dtype=np.float)))
-g.append ( Pose3.Expmap(q[5]*np.array([0,1,0,0,0,5], dtype=np.float)))
-g.append ( Pose3.Expmap(q[6]*np.array([1,0,0,0,0,0], dtype=np.float)))
-gtool =  Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(7, 0, 0))
 
-fk = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
-# 
-J = np.array([[0,0,0,0,0,0]]).T
-for i in range(0,7):
-	G = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
-	for j in range (0,i):
-		G = compose(G,T[j])
+def get_si():
+	si = []
+	si.append(np.array([0,0,1,0,0,0], dtype=np.float))
+	si.append(np.array([0,-1,0,0,0,-1], dtype=np.float))
+	si.append(np.array([1,0,0,0,0,0], dtype=np.float))
+	si.append(np.array([0,-1,0,0,0,-3], dtype=np.float))
+	si.append(np.array([1,0,0,0,0,0], dtype=np.float))
+	si.append(np.array([0,-1,0,0,0,-5], dtype=np.float))
+	si.append(np.array([1,0,0,0,0,0], dtype=np.float))
+	return si
 
-	if i == 0:
-		J = np.c_[J,np.expand_dims(si[i], axis=1)]
-	else:		
-		J = np.c_[J,np.expand_dims(G.Adjoint(si[i]), axis=1)]
+def get_T(q,L):
+	T=[]
+	T.append(Pose3(Rot3.Ypr(q[0], 0.0, 0.0 ), Point3(0, 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, q[1], 0.0), Point3(L[0], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, 0.0, q[2]), Point3(L[1], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, q[3],0.0 ), Point3(L[2], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, 0.0 ,q[4] ), Point3(L[3], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, q[5],0.0 ), Point3(L[4], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, 0.0 ,q[6] ), Point3(L[5], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, 0.0 , 0.0 ), Point3(L[6], 0, 0)))
+	return T
 
-J = np.delete(J, 0, 1)
-Jinv = np.linalg.pinv(J)
-d = np.matmul(Jinv,v)
-print J
-print Jinv
+def get_expMap(q,si):
+	g = []
+	for i in range(0,7):
+		# fk = compose(fk,T[i])
+		g.append(Pose3.Expmap(q[i]*si[i]))
+	return g
 
-q = q+np.squeeze(d)
+def get_Jacobian(T,si):
+	J = np.array([[0,0,0,0,0,0]]).T
+	for i in range(0,7):
+		G = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
+		for j in range (0,i):
+			G = compose(G,T[j])
+		if i == 0:
+			J = np.c_[J,np.expand_dims(si[i], axis=1)]
+		else:
+			J = np.c_[J,np.expand_dims(G.Adjoint(si[i]), axis=1)]
 
-print q
+	J = np.delete(J, 0, 1)
+	return J
 
-del T[:]
-T.append(Pose3(Rot3.Ypr(q[0], 0.0, 0.0 ), Point3(0, 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, q[1], 0.0), Point3(L[0], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, 0.0, q[2]), Point3(L[1], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, q[3],0.0 ), Point3(L[2], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, 0.0 ,q[4] ), Point3(L[3], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, q[5],0.0 ), Point3(L[4], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, 0.0 ,q[6] ), Point3(L[5], 0, 0)))
-T.append(Pose3(Rot3.Ypr(0.0, 0.0 , 0.0 ), Point3(L[6], 0, 0)))
+def get_fk(T,L,q): 
+	del T[:]
+	T.append(Pose3(Rot3.Ypr(q[0], 0.0, 0.0 ), Point3(0, 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, q[1], 0.0), Point3(L[0], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, 0.0, q[2]), Point3(L[1], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, q[3],0.0 ), Point3(L[2], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, 0.0 ,q[4] ), Point3(L[3], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, q[5],0.0 ), Point3(L[4], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, 0.0 ,q[6] ), Point3(L[5], 0, 0)))
+	T.append(Pose3(Rot3.Ypr(0.0, 0.0 , 0.0 ), Point3(L[6], 0, 0)))
 
-fk = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
+	fk = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
 
-for i in range(0,8):
-	fk = compose(fk,T[i])
-print fk
+	for i in range(0,8):
+		fk = compose(fk,T[i])
+
+	return fk
 
 
-# # test fk
-# g.append ( Pose3.Expmap(q[0]*np.array([0,0,1,0,0,0], dtype=np.float)))
-# g.append ( Pose3.Expmap(q[1]*np.array([0,1,0,0,0,1], dtype=np.float)))
-# g.append ( Pose3.Expmap(q[2]*np.array([1,0,0,0,0,0], dtype=np.float)))
-# g.append ( Pose3.Expmap(q[3]*np.array([0,1,0,0,0,3], dtype=np.float)))
-# g.append ( Pose3.Expmap(q[4]*np.array([1,0,0,0,0,0], dtype=np.float)))
-# g.append ( Pose3.Expmap(q[5]*np.array([0,1,0,0,0,5], dtype=np.float)))
-# g.append ( Pose3.Expmap(q[6]*np.array([1,0,0,0,0,0], dtype=np.float)))
-# gtool =  Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(7, 0, 0))
+def main():
+	q = [0,0,0,0,0,0,0]
+	L = [1, 1, 1, 1, 1, 1, 1]
+	si = get_si()
+	T = get_T(q,L)
 
-# fk = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
+	# FK init
+	fk = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
 
-# for i in range(0,7):
-# 	fk = compose(fk,g[i])
+	# expMap
+	g = get_expMap(q,si)
+	gtool =  Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(7, 0, 0))	
 
-# print compose(fk,gtool)
+	# Jacobian
+	J = get_Jacobian(T,si)
+	Jinv = np.linalg.pinv(J)
+	
+	# check with movement
+	v = np.array([[0,0,0,0,0,0]]).T
+	d = np.matmul(Jinv,v)
+	q += np.squeeze(d)
+
+	fk = get_fk(T,L,q)
+	print fk
+
+main()
