@@ -5,6 +5,11 @@ import numpy as np
 from functools import reduce
 
 import math
+import pdb
+
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
 
 def compose(*poses):
   """Compose all Pose2 transforms given as arguments from left to right."""
@@ -81,11 +86,12 @@ def get_fk(L, q):
 def delta(current,goal):
   return np.array([goal.translation().x() - current.translation().x() ,goal.translation().y() - current.translation().y(),goal.translation().z() - current.translation().z()])
 
-def interpolate (current, goal, N=400):
+def interpolate (current, goal, N):
   diff = delta(current, goal)
   return [Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(current.translation().x() + diff[0]*t, current.translation().y() + diff[1]*t, current.translation().z() + diff[2]*t)) for t in np.linspace(0, 1, N)]
 
 def clamp_to_circle(val):
+  return val
   if val < -2*math.pi:
     return val % (-2*math.pi)
   elif val > 2*math.pi:
@@ -102,6 +108,10 @@ def main():
   
   # v = np.array([[0, 0, 1, 0, 0, 0]]).T
   q = [0, 0, 0, 0, 0, 0, 0]
+
+  N = 40
+
+  y = list()
  
   si = get_si()
   T = get_T(q, lengths)
@@ -109,19 +119,16 @@ def main():
   # FK init
   fk = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
 
-  goal = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(2, 2, 2))
+  goal = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(3, 0, 0))
   
   current = get_fk(lengths, q)
 
-  poses = interpolate(current,goal)
-    
+  poses = interpolate(current,goal, N)
+  min_err = 100.
+ 
   for pose in poses:
     current = get_fk(lengths, q)
     error = delta(current,pose)
-    if np.sum(delta(current, goal)**2) < 0.1 and sum(q) > 0:
-        print "Woah!"
-        print current
-        break
     T = get_T(q,lengths)
     J = get_Jacobian(T,si)
     
@@ -133,15 +140,32 @@ def main():
     ctc_vec = np.vectorize(clamp_to_circle)
     val = ctc_vec(val_pre)
     q += val
-    print "\n-------------------------------------- current"
-    print current
-    print "\n", error.tolist()
-    print "\n=================== val"
-    print val.tolist()
-    print "\n******************* q"
-    print q.tolist()
+    #print "\n-------------------------------------- current
+    l2_err = sum(delta(current, goal).tolist())**2
+    print "\n", l2_err
+    print current.translation()
+    if l2_err < min_err and l2_err != 0.:
+        min_err = l2_err
+    y.append(current.translation())
+    #print "\n=================== val"
+    #print val.tolist()
+    #print "\n******************* q"
+    #print q.tolist()
 
   # print get_fk(lengths,q)
+  print "min_err:", min_err
+  vector = map(lambda x: list(x.vector()), y)
+  xs = map(lambda x: x[0], vector)
+  ys = map(lambda x: x[1], vector)
+  zs = map(lambda x: x[2], vector)
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111, projection='3d')
+  ax.plot(xs, ys, zs, label='Tool Trajectory')
+  ax.set_xlabel("x")
+  ax.set_ylabel("y")
+  ax.set_zlabel("z")
+  plt.show()
 
 if __name__ == '__main__':
   np.set_printoptions(suppress=True)
