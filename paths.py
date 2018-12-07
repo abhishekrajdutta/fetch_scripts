@@ -91,7 +91,6 @@ def interpolate (current, goal, N):
   return [Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(current.translation().x() + diff[0]*t, current.translation().y() + diff[1]*t, current.translation().z() + diff[2]*t)) for t in np.linspace(0, 1, N)]
 
 def clamp_to_circle(val):
-  return val
   if val < -2*math.pi:
     return val % (-2*math.pi)
   elif val > 2*math.pi:
@@ -109,10 +108,10 @@ def main():
   # v = np.array([[0, 0, 1, 0, 0, 0]]).T
   q = [0, 0, 0, 0, 0, 0, 0]
 
+  # Number of steps on trajectory
   N = 40
-
   y = list()
- 
+  
   si = get_si()
   T = get_T(q, lengths)
 
