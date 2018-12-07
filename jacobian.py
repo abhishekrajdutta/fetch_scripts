@@ -16,7 +16,7 @@ FETCH_WHEEL_BASE = 2 * 0.18738
 
 base_jacobian = np.array([[0, 0], #th_x
 													[0, 0], #th_y
-													[1/FETCH_WHEEL_BASE, -1/FETCH_WHEEL_BASE]  #th_z
+													[1/FETCH_WHEEL_BASE, -1/FETCH_WHEEL_BASE],  #th_z
 													[1, 1], #x
 													[0, 0], #y
 													[0, 0], #z
