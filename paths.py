@@ -14,7 +14,7 @@ def compose(*poses):
 # setup
 
 
-# [roll, pitch, yaw, x, y, z]
+# [yaw, pitch, roll, x, y, z]
 def get_si():
   si = []
   #si.append(np.array([0, 0, 1, 0, 0, 0], dtype=np.float))
@@ -25,11 +25,11 @@ def get_si():
   #si.append(np.array([0, 1, 0, 0, 0, 5], dtype=np.float))
   #si.append(np.array([1, 0, 0, 0, 0, 0], dtype=np.float))
   si.append(np.array([1, 0, 0, 0, 0, 0], dtype=np.float))
-  si.append(np.array([0, 1, 0, 0, 0, 1], dtype=np.float))
+  si.append(np.array([0, 1, 0, 1, 0, 0], dtype=np.float))
   si.append(np.array([0, 0, 1, 0, 0, 0], dtype=np.float))
-  si.append(np.array([0, 1, 0, 0, 0, 3], dtype=np.float))
+  si.append(np.array([0, 1, 0, 3, 0, 0], dtype=np.float))
   si.append(np.array([0, 0, 1, 0, 0, 0], dtype=np.float))
-  si.append(np.array([0, 1, 0, 0, 0, 5], dtype=np.float))
+  si.append(np.array([0, 1, 0, 5, 0, 0], dtype=np.float))
   si.append(np.array([0, 0, 1, 0, 0, 0], dtype=np.float))
   return si
 
@@ -72,29 +72,26 @@ def get_Jacobian(T, si):
 
 
 def get_fk(L, q):
-  T = list()
-  T.append(Pose3(Rot3.Ypr(q[0], 0.0, 0.0), Point3(0, 0, 0)))
-  T.append(Pose3(Rot3.Ypr(0.0, q[1], 0.0), Point3(L[0], 0, 0)))
-  T.append(Pose3(Rot3.Ypr(0.0, 0.0, q[2]), Point3(L[1], 0, 0)))
-  T.append(Pose3(Rot3.Ypr(0.0, q[3], 0.0), Point3(L[2], 0, 0)))
-  T.append(Pose3(Rot3.Ypr(0.0, 0.0, q[4]), Point3(L[3], 0, 0)))
-  T.append(Pose3(Rot3.Ypr(0.0, q[5], 0.0), Point3(L[4], 0, 0)))
-  T.append(Pose3(Rot3.Ypr(0.0, 0.0, q[6]), Point3(L[5], 0, 0)))
-  T.append(Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(L[6], 0, 0)))
-
+  T = get_T(q, L)
   fk = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
-
-  for i in range(0, 8):
-    fk = compose(fk, T[i])
-
+  for i in T:
+    fk = compose(fk, i)
   return fk
 
 def delta(current,goal):
   return np.array([goal.translation().x() - current.translation().x() ,goal.translation().y() - current.translation().y(),goal.translation().z() - current.translation().z()])
 
-def interpolate (current, goal,N =20):
+def interpolate (current, goal, N=400):
   diff = delta(current, goal)
   return [Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(current.translation().x() + diff[0]*t, current.translation().y() + diff[1]*t, current.translation().z() + diff[2]*t)) for t in np.linspace(0, 1, N)]
+
+def clamp_to_circle(val):
+  if val < -2*math.pi:
+    return val % (-2*math.pi)
+  elif val > 2*math.pi:
+    return val % (2*math.pi)
+  else:
+    return val
 
 def main():
   
@@ -112,23 +109,40 @@ def main():
   # FK init
   fk = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(0, 0, 0))
 
-  goal = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(2, 5, 0))
+  goal = Pose3(Rot3.Ypr(0.0, 0.0, 0.0), Point3(2, 2, 2))
   
   current = get_fk(lengths, q)
 
   poses = interpolate(current,goal)
-
+    
   for pose in poses:
     current = get_fk(lengths, q)
     error = delta(current,pose)
+    if np.sum(delta(current, goal)**2) < 0.1 and sum(q) > 0:
+        print "Woah!"
+        print current
+        break
     T = get_T(q,lengths)
     J = get_Jacobian(T,si)
-    q+= np.squeeze(np.matmul(np.linalg.pinv(J),np.array([[0,0,0,error[0],error[1],error[2]]]).T))
-    print '*****************\n',q.tolist()
-    print '\nerrors:\n',T
-    print get_fk(lengths, q),'\n'
+    
+    pinv_J = np.linalg.pinv(J)
+    #thresh_inds = pinv_J < 1e-4
+    #pinv_J[thresh_inds] = 0.
+    
+    val_pre = np.squeeze(np.matmul(pinv_J, np.array([[0,0,0,error[0],error[1],error[2]]]).T))
+    ctc_vec = np.vectorize(clamp_to_circle)
+    val = ctc_vec(val_pre)
+    q += val
+    print "\n-------------------------------------- current"
+    print current
+    print "\n", error.tolist()
+    print "\n=================== val"
+    print val.tolist()
+    print "\n******************* q"
+    print q.tolist()
 
   # print get_fk(lengths,q)
 
 if __name__ == '__main__':
+  np.set_printoptions(suppress=True)
   main()
