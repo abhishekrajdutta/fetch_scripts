@@ -1,0 +1,13 @@
+<package>
+  <name>fetch_scripts</name>
+  <version>0.0.0</version>
+  <author>Ivan Dario Jimenez</author>
+  <maintainer email="seick@gatech.edu">Stephen Eick</maintainer>
+  <description>
+    The package for our Mobile Manipulation Class Project.
+  </description>
+  <license>GPLv3</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <run_depend>fetch_gazebo</run_depend>
+  <run_depend>fetch_moveit_config</run_depend>
+</package>
