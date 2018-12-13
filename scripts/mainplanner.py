@@ -68,7 +68,7 @@ if __name__ == '__main__':
 #       z: -0.0268161732665
 #       w: 0.999635792414
 
-	L = np.array([[-0.087 + 0.1195,0,0.3486 + 0.3774],[0,0,0],[0.117,0,0.06],[0.219,0,0],[0.133,0,0],[0.197,0,0],[0.1245,0,0],[0.1385,0,0],[0.16645,0,0]])	                   
+	L = np.array([[-0.086875 ,0,0.37743],[0.119525,0,0.34858],[0.117,0,0.06],[0.219,0,0],[0.133,0,0],[0.197,0,0],[0.1245,0,0],[0.1385,0,0],[0.16645,0,0]])	                   
 
 
 	g= []
@@ -86,6 +86,10 @@ if __name__ == '__main__':
 	for i in range(0,8):
 		g_curr = np.matmul(g_curr,g[i])
 
+	print g_curr 
+	stop
+
+
 	si = []
 	si.append(np.array([[0,0,0,0,0,1]]).T)
 	si.append(np.array([[0,0,1,0,-1*(-L[0][0]),0]]).T)
@@ -98,55 +102,56 @@ if __name__ == '__main__':
 
 	# Consider the wrist roll link to be the last link
 
-	goals = np.array([[0.640036865808,0,1.11652027628], [0.640036865808,0,1.11652027628], [0.640036865808,0,1.11652027628], [0.640036865808,0,1.11652027628], [0.640036865808,0,1.11652027628]])
+	# goals = np.array([[0.640036865808,0,1.11652027628], [0.640036865808,0,1.11652027628], [0.640036865808,0,1.11652027628], [0.640036865808,0,1.11652027628], [0.640036865808,0,1.11652027628]])
+	goals = np.array([[0.640036865808,0,1.61652027628]])
 
-	for i in range (0,4):
-		start = getTranslation(g_curr)	
-		goal = goals[i]
-		diff = goal - start
-		diff = diff.astype(float)
-		N = 20
+	# for i in range (0,4):
+	start = getTranslation(g_curr)	
+	goal = goals[0]
+	diff = goal - start
+	diff = diff.astype(float)
+	N = 20
 
-		print Q
+	for i in range(1,N+1):
+		g[0] = (SE3(np.eye(3),np.array([L[0][0],L[0][1],L[0][2] + Q[0]])))
+		g[1] = (SE3(Rotz(Q[1]),L[1]))
+		g[2] = (SE3(Roty(Q[2]),L[2]))
+		g[3] = (SE3(Rotx(Q[3]),L[3]))
+		g[4] = (SE3(Roty(Q[4]),L[4]))
+		g[5] = (SE3(Rotx(Q[5]),L[5]))
+		g[6] = (SE3(Roty(Q[6]),L[6]))
+		g[7] = (SE3(Rotx(Q[7]),L[7]))
+		# g.append (SE3(Rotz(0),L[8]))
+		
+		g_curr = np.eye(4)
+		for k in range(0,8):
+			g_curr = np.matmul(g_curr,g[k])
 
-		for i in range(1,N+1):
-			g.append (SE3(np.eye(3),np.array([L[0][0],L[0][1],L[0][2] + Q[0]])))
-			g.append (SE3(Rotz(Q[1]),L[1]))
-			g.append (SE3(Roty(Q[2]),L[2]))
-			g.append (SE3(Rotx(Q[3]),L[3]))
-			g.append (SE3(Roty(Q[4]),L[4]))
-			g.append (SE3(Rotx(Q[5]),L[5]))
-			g.append (SE3(Roty(Q[6]),L[6]))
-			g.append (SE3(Rotx(Q[7]),L[7]))
-			# g.append (SE3(Rotz(0),L[8]))
-			
-			g_curr = np.eye(4)
-			for k in range(0,8):
-				g_curr = np.matmul(g_curr,g[k])
+		pose = start + (float(i)/N)*diff
+		print pose
+		curr = getTranslation(g_curr)
+		v = np.array([0,0,0,pose[0] - curr[0],pose[1] - curr[1],pose[2] - curr[2]]).T
 
-			pose = start + (float(i)/N)*diff
-			curr = getTranslation(g_curr)
-			v = np.array([0,0,0,pose[0] - curr[0],pose[1] - curr[1],pose[2] - curr[2]]).T
+		J = np.zeros((6,8))
 
-			J = np.zeros((6,8))
+		for n in range(0,8):
+			if n == 0:
+				J[:,n] = np.squeeze(si[n])
+			else:
+				T = np.eye(4)				
+				for m in range(0,n):
+					T = np.matmul(T,g[k])					
+				d = getTranslation(T)
+				R = getR(T)
+				AdT = np.r_[np.c_[R,np.zeros((3,3))],np.c_[np.matmul(hat_d(d),R),R,]]
+				J[:,n] = np.squeeze(np.matmul(AdT,si[n]))
 
-			for n in range(0,8):
-				if n == 0:
-					J[:,n] = np.squeeze(si[n])
-				else:
-					T = np.eye(4)				
-					for m in range(0,n):
-						T = np.matmul(T,g[k])					
-					d = getTranslation(T)
-					R = getR(T)
-					AdT = np.r_[np.c_[R,np.zeros((3,3))],np.c_[np.matmul(hat_d(d),R),R,]]
-					J[:,n] = np.squeeze(np.matmul(AdT,si[n]))
+		Qdot = np.matmul(np.matmul(J.T,np.linalg.inv(np.matmul(J,J.T)+ 0.05*np.eye(6))),v)
+		Q = Q + np.squeeze(Qdot)
 
-			Qdot = np.matmul(np.matmul(J.T,np.linalg.inv(np.matmul(J,J.T)+ 0.05*np.eye(6))),v)
-			Q = Q + np.squeeze(Qdot)
+	move_group.moveToJointPosition(joint_names, Q , wait=False)
+	move_group.get_move_action().wait_for_result()
+	print 'goal reached!'
 
-		print Q
-
-		move_group.moveToJointPosition(joint_names, Q , wait=False)
-		move_group.get_move_action().wait_for_result()
+	print goal,g_curr
 
