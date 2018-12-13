@@ -11,6 +11,7 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Twist
 # Safety!: There is NO perception.
 #          The ONLY objects the collision detection software is aware
 #          of are itself & the floor.
+
 if __name__ == '__main__':
     rospy.init_node("hi")
     vel_pub = rospy.Publisher('/base_controller/command', Twist, queue_size = 10)
@@ -29,7 +30,6 @@ if __name__ == '__main__':
     planning_scene.addCube("my_back_ground", 2, -1.2, 0.0, -1.0)
     planning_scene.addCube("my_left_ground", 2, 0.0, 1.2, -1.0)
     planning_scene.addCube("my_right_ground", 2, 0.0, -1.2, -1.0)
-
     # This is the wrist link not the gripper itself
     gripper_frame = 'wrist_roll_link'
     q = Quaternion(0,0,0.707,0.707)
@@ -39,9 +39,9 @@ if __name__ == '__main__':
                           q),
                      Pose(Point(0.442, 0.7, 1.026),
                           q),
-                     Pose(Point(0.442, 0.7, 1.226),
+                     Pose(Point(0.442, 0.7, 0.626),
                           q),
-                     Pose(Point(0.442, 0.484, 1.226),
+                     Pose(Point(0.442, 0.484, 0.626),
                           q)
                      ]
 
@@ -49,30 +49,28 @@ if __name__ == '__main__':
     gripper_pose_stamped = PoseStamped()
     gripper_pose_stamped.header.frame_id = 'base_link'
 
-        for pose in gripper_poses:
-            # Finish building the Pose_stamped message
-            # If the message stamp is not current it could be ignored
-            gripper_pose_stamped.header.stamp = rospy.Time.now()
-            # Set the message pose
-            gripper_pose_stamped.pose = pose
+    for pose in gripper_poses:
+        # Finish building the Pose_stamped message
+        # If the message stamp is not current it could be ignored
+        gripper_pose_stamped.header.stamp = rospy.Time.now()
+        # Set the message pose
+        gripper_pose_stamped.pose = pose
 
-            # Move gripper frame to the pose specified
-            move_group.moveToPose(gripper_pose_stamped, gripper_frame)
-            result = move_group.get_move_action().get_result()
+        # Move gripper frame to the pose specified
+        move_group.moveToPose(gripper_pose_stamped, gripper_frame)
+        result = move_group.get_move_action().get_result()
 
-                # Checking the MoveItErrorCode
-                if result.error_code.val == MoveItErrorCodes.SUCCESS:
-                    rospy.loginfo("Hello there!")
-                else:
-                    # If you get to this point please search for:
-                    # moveit_msgs/MoveItErrorCodes.msg
-                    rospy.logerr("Arm goal in state: %s",
-                                 move_group.get_move_action().get_state())
-            else:
-                rospy.logerr("MoveIt! failure no result returned.")
+            # Checking the MoveItErrorCode
+        if result.error_code.val == MoveItErrorCodes.SUCCESS:
+            rospy.loginfo("Hello there!")
+        else:
+            # If you get to this point please search for:
+            # moveit_msgs/MoveItErrorCodes.msg
+            rospy.logerr("Arm goal in state: %s",
+                         move_group.get_move_action().get_state())
 
-        # rospy.spin()
+    # rospy.spin()
 
-    # This stops all arm movement goals
-    # It should be called when a program is exiting so movement stops
-    move_group.get_move_action().cancel_all_goals()
+# This stops all arm movement goals
+# It should be called when a program is exiting so movement stops
+move_group.get_move_action().cancel_all_goals()
